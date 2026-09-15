@@ -3,11 +3,11 @@ const bcrypt = require("bcrypt");
 
 async function createUser(req, res) {
     try {
-        const { name, email, password, organization_id, role } = req.body;
+        const { name, email, password, organization_id } = req.body;
 
-        if (!name || !email || !password || !organization_id || !role) {
+        if (!name || !email || !password || !organization_id) {
             return res.status(400).json({
-                error: "All fields are required"
+                error: "Name, email, password and organization_id are required"
             });
         }
 
@@ -29,7 +29,13 @@ async function createUser(req, res) {
             (organization_id, name, email, password_hash, role)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id, organization_id, name, email, role, created_at`,
-            [organization_id, name, email, passwordHash, role]
+            [
+                organization_id,
+                name,
+                email,
+                passwordHash,
+                "viewer"
+            ]
         );
 
         res.status(201).json({
