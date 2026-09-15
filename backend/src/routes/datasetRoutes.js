@@ -1,9 +1,13 @@
 const express = require("express");
+
 const {
     createDataset,
     getDatasets,
-    getDatasetById
+    getDatasetById,
+    updateDataset,
+    deleteDataset
 } = require("../controllers/datasetController");
+
 const { authenticateToken } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
 
@@ -27,6 +31,18 @@ router.get(
     "/:id",
     authorizeRoles("admin", "analyst", "viewer"),
     getDatasetById
+);
+
+router.put(
+    "/:id",
+    authorizeRoles("admin", "analyst"),
+    updateDataset
+);
+
+router.delete(
+    "/:id",
+    authorizeRoles("admin", "analyst"),
+    deleteDataset
 );
 
 module.exports = router;

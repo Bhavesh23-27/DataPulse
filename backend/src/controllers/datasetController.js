@@ -96,8 +96,94 @@ async function getDatasetById(req, res) {
     }
 }
 
+async function updateDataset(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const organizationId = req.user.organizationId;
+
+        const { name, description, source_type, status } = req.body;
+
+        if (!name || !source_type || !status) {
+            return res.status(400).json({
+                error: "Name, source_type and status are required"
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE datasets
+             SET name = $1,
+                 description = $2,
+                 source_type = $3,
+                 status = $4
+             WHERE id = $5
+               AND organization_id = $6
+             RETURNING id, organization_id, created_by, name,
+                       description, source_type, status, created_at`,
+            [
+                name,
+                description || null,
+                source_type,
+                status,
+                datasetId,
+                organizationId
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        res.json({
+            message: "Dataset updated successfully",
+            dataset: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Failed to update dataset:", error.message);
+
+        res.status(500).json({
+            error: "Failed to update dataset"
+        });
+    }
+}
+
+async function deleteDataset(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const organizationId = req.user.organizationId;
+
+        const result = await pool.query(
+            `DELETE FROM datasets
+             WHERE id = $1
+               AND organization_id = $2
+             RETURNING id, name`,
+            [datasetId, organizationId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        res.json({
+            message: "Dataset deleted successfully",
+            dataset: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Failed to delete dataset:", error.message);
+
+        res.status(500).json({
+            error: "Failed to delete dataset"
+        });
+    }
+}
+
 module.exports = {
     createDataset,
     getDatasets,
-    getDatasetById
+    getDatasetById,
+    updateDataset,
+    deleteDataset
 };
