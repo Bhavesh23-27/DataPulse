@@ -70,6 +70,34 @@ async function login(req, res) {
     }
 }
 
+async function getCurrentUser(req, res) {
+    try {
+        const result = await pool.query(
+            `SELECT id, organization_id, name, email, role, created_at
+             FROM users
+             WHERE id = $1`,
+            [req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "User not found"
+            });
+        }
+
+        res.json({
+            user: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Failed to fetch current user:", error.message);
+
+        res.status(500).json({
+            error: "Failed to fetch current user"
+        });
+    }
+}
+
 module.exports = {
-    login
+    login,
+    getCurrentUser
 };
