@@ -1,5 +1,5 @@
 const express = require("express");
-const pool = require("./db");
+const organizationRoutes = require("./routes/organizationRoutes");
 
 const app = express();
 
@@ -11,21 +11,7 @@ app.get("/", (req, res) => {
     });
 });
 
-app.get("/api/organizations", async (req, res) => {
-    try {
-        const result = await pool.query(
-            "SELECT id, name, created_at FROM organizations ORDER BY id"
-        );
-
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Failed to fetch organizations:", error.message);
-
-        res.status(500).json({
-            error: "Failed to fetch organizations"
-        });
-    }
-});
+app.use("/api/organizations", organizationRoutes);
 
 app.listen(PORT, () => {
     console.log(`DataPulse API running on port ${PORT}`);
