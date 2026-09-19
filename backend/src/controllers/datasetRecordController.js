@@ -253,8 +253,106 @@ async function getRecordById(req, res) {
     }
 }
 
+async function updateRecord(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const recordId = req.params.recordId;
+        const organizationId = req.user.organizationId;
+
+        const { data } = req.body;
+
+        if (!data) {
+            return res.status(400).json({
+                error: "Data is required"
+            });
+        }
+
+        if (
+            typeof data !== "object" ||
+            Array.isArray(data) ||
+            data === null
+        ) {
+            return res.status(400).json({
+                error: "Data must be a JSON object"
+            });
+        }
+
+        const datasetResult = await pool.query(
+            `SELECT id
+             FROM datasets
+             WHERE id = $1
+               AND organization_id = $2`,
+            [datasetId, organizationId]
+        );
+
+        if (datasetResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        const recordResult = await pool.query(
+            `SELECT id, row_number
+             FROM dataset_records
+             WHERE id = $1
+               AND dataset_id = $2`,
+            [recordId, datasetId]
+        );
+
+        if (recordResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Record not found"
+            });
+        }
+
+        const columnsResult = await pool.query(
+            `SELECT name, data_type, nullable
+             FROM dataset_columns
+             WHERE dataset_id = $1
+             ORDER BY position`,
+            [datasetId]
+        );
+
+        const validationError = validateRecordData(
+            data,
+            columnsResult.rows
+        );
+
+        if (validationError) {
+            return res.status(400).json({
+                error: validationError
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE dataset_records
+             SET data = $1
+             WHERE id = $2
+               AND dataset_id = $3
+             RETURNING id, dataset_id, data, row_number, created_at`,
+            [
+                data,
+                recordId,
+                datasetId
+            ]
+        );
+
+        res.json({
+            message: "Record updated successfully",
+            record: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Failed to update dataset record:", error.message);
+
+        res.status(500).json({
+            error: "Failed to update dataset record"
+        });
+    }
+}
+
 module.exports = {
     createRecord,
     getRecords,
-    getRecordById
+    getRecordById,
+    updateRecord
 };
