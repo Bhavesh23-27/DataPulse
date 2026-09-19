@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const datasetRoutes = require("./routes/datasetRoutes");
 const datasetColumnRoutes = require("./routes/datasetColumnRoutes");
 const datasetRecordRoutes = require("./routes/datasetRecordRoutes");
+const importRoutes = require("./routes/importRoutes");
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/datasets", datasetRoutes);
 app.use("/api/datasets", datasetColumnRoutes);
 app.use("/api/datasets", datasetRecordRoutes);
+app.use("/api/datasets", importRoutes);
 
 app.listen(PORT, () => {
     console.log(`DataPulse API running on port ${PORT}`);
