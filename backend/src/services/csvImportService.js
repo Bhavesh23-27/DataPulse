@@ -165,9 +165,34 @@ function validateAndTransformRows(rows, columns) {
     };
 }
 
+async function validateCsvForDataset(
+    csvText,
+    datasetId,
+    organizationId
+) {
+    const rows = parseCsv(csvText);
+
+    const columns = await getDatasetColumns(
+        datasetId,
+        organizationId
+    );
+
+    if (columns.length === 0) {
+        throw new Error(
+            "Dataset does not have any columns"
+        );
+    }
+
+    return validateAndTransformRows(
+        rows,
+        columns
+    );
+}
+
 module.exports = {
     parseCsv,
     getDatasetColumns,
     convertValue,
-    validateAndTransformRows
+    validateAndTransformRows,
+    validateCsvForDataset
 };
