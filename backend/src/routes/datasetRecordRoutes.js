@@ -4,7 +4,8 @@ const {
     createRecord,
     getRecords,
     getRecordById,
-    updateRecord
+    updateRecord,
+    deleteRecord
 } = require("../controllers/datasetRecordController");
 
 const {
@@ -41,6 +42,12 @@ router.put(
     "/:id/records/:recordId",
     authorizeRoles("admin", "analyst"),
     updateRecord
+);
+
+router.delete(
+    "/:id/records/:recordId",
+    authorizeRoles("admin", "analyst"),
+    deleteRecord
 );
 
 module.exports = router;

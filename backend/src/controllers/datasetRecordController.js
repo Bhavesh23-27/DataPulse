@@ -350,9 +350,57 @@ async function updateRecord(req, res) {
     }
 }
 
+async function deleteRecord(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const recordId = req.params.recordId;
+        const organizationId = req.user.organizationId;
+
+        const datasetResult = await pool.query(
+            `SELECT id
+             FROM datasets
+             WHERE id = $1
+               AND organization_id = $2`,
+            [datasetId, organizationId]
+        );
+
+        if (datasetResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        const result = await pool.query(
+            `DELETE FROM dataset_records
+             WHERE id = $1
+               AND dataset_id = $2
+             RETURNING id, dataset_id, row_number`,
+            [recordId, datasetId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Record not found"
+            });
+        }
+
+        res.json({
+            message: "Record deleted successfully",
+            record: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Failed to delete dataset record:", error.message);
+
+        res.status(500).json({
+            error: "Failed to delete dataset record"
+        });
+    }
+}
+
 module.exports = {
     createRecord,
     getRecords,
     getRecordById,
-    updateRecord
+    updateRecord,
+    deleteRecord
 };
