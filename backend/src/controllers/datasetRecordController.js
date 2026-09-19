@@ -1,5 +1,72 @@
 const pool = require("../db");
 
+function validateRecordData(data, columns) {
+    for (const column of columns) {
+        const value = data[column.name];
+
+        if (value === undefined || value === null) {
+            if (!column.nullable) {
+                return `${column.name} is required`;
+            }
+
+            continue;
+        }
+
+        switch (column.data_type) {
+            case "text":
+                if (typeof value !== "string") {
+                    return `${column.name} must be text`;
+                }
+                break;
+
+            case "number":
+                if (typeof value !== "number" || !Number.isFinite(value)) {
+                    return `${column.name} must be a number`;
+                }
+                break;
+
+            case "boolean":
+                if (typeof value !== "boolean") {
+                    return `${column.name} must be a boolean`;
+                }
+                break;
+
+            case "date":
+                if (
+                    typeof value !== "string" ||
+                    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+                ) {
+                    return `${column.name} must be a valid date in YYYY-MM-DD format`;
+                }
+                break;
+
+            case "datetime":
+                if (
+                    typeof value !== "string" ||
+                    Number.isNaN(Date.parse(value))
+                ) {
+                    return `${column.name} must be a valid datetime`;
+                }
+                break;
+
+            default:
+                return `Unsupported data type for ${column.name}`;
+        }
+    }
+
+        const allowedFields = new Set(
+        columns.map((column) => column.name)
+    );
+
+    for (const field of Object.keys(data)) {
+        if (!allowedFields.has(field)) {
+            return `${field} is not a valid dataset column`;
+        }
+    }
+
+    return null;
+}
+
 async function createRecord(req, res) {
     try {
         const datasetId = req.params.id;
@@ -42,6 +109,25 @@ async function createRecord(req, res) {
                 error: "Dataset not found"
             });
         }
+
+        const columnsResult = await pool.query(
+        `SELECT name, data_type, nullable
+         FROM dataset_columns
+         WHERE dataset_id = $1
+         ORDER BY position`,
+         [datasetId]
+        );
+
+        const validationError = validateRecordData(
+        data,
+        columnsResult.rows
+        );
+
+        if (validationError) {
+        return res.status(400).json({
+          error: validationError
+        });
+     }
 
         const existingRecord = await pool.query(
             `SELECT id
