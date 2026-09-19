@@ -189,10 +189,61 @@ async function validateCsvForDataset(
     );
 }
 
+async function insertRecords(
+    datasetId,
+    transformedRows
+) {
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        const existingRecordsResult = await client.query(
+            `SELECT COALESCE(MAX(row_number), 0) AS max_row_number
+             FROM dataset_records
+             WHERE dataset_id = $1`,
+            [datasetId]
+        );
+
+        let nextRowNumber =
+            Number(existingRecordsResult.rows[0].max_row_number) + 1;
+
+        const insertedRecords = [];
+
+        for (const row of transformedRows) {
+            const result = await client.query(
+                `INSERT INTO dataset_records
+                (dataset_id, data, row_number)
+                VALUES ($1, $2::jsonb, $3)
+                RETURNING id, dataset_id, data, row_number, created_at`,
+                [
+                    datasetId,
+                    JSON.stringify(row),
+                    nextRowNumber
+                ]
+            );
+
+            insertedRecords.push(result.rows[0]);
+
+            nextRowNumber++;
+        }
+
+        await client.query("COMMIT");
+
+        return insertedRecords;
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     parseCsv,
     getDatasetColumns,
     convertValue,
     validateAndTransformRows,
-    validateCsvForDataset
+    validateCsvForDataset,
+    insertRecords
 };
