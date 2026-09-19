@@ -1,4 +1,5 @@
 const { parse } = require("csv-parse/sync");
+const pool = require("../db");
 
 function parseCsv(csvText) {
     const records = parse(csvText, {
@@ -8,6 +9,24 @@ function parseCsv(csvText) {
     });
 
     return records;
+}
+
+async function getDatasetColumns(datasetId, organizationId) {
+    const result = await pool.query(
+        `SELECT id, dataset_id, name, data_type, position, nullable
+         FROM dataset_columns
+         WHERE dataset_id = $1
+           AND EXISTS (
+               SELECT 1
+               FROM datasets
+               WHERE datasets.id = dataset_columns.dataset_id
+                 AND datasets.organization_id = $2
+           )
+         ORDER BY position`,
+        [datasetId, organizationId]
+    );
+
+    return result.rows;
 }
 
 function convertValue(value, dataType) {
@@ -148,6 +167,7 @@ function validateAndTransformRows(rows, columns) {
 
 module.exports = {
     parseCsv,
+    getDatasetColumns,
     convertValue,
     validateAndTransformRows
 };
