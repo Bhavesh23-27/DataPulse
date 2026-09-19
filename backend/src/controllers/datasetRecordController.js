@@ -54,7 +54,7 @@ function validateRecordData(data, columns) {
         }
     }
 
-        const allowedFields = new Set(
+    const allowedFields = new Set(
         columns.map((column) => column.name)
     );
 
@@ -111,23 +111,23 @@ async function createRecord(req, res) {
         }
 
         const columnsResult = await pool.query(
-        `SELECT name, data_type, nullable
-         FROM dataset_columns
-         WHERE dataset_id = $1
-         ORDER BY position`,
-         [datasetId]
+            `SELECT name, data_type, nullable
+             FROM dataset_columns
+             WHERE dataset_id = $1
+             ORDER BY position`,
+            [datasetId]
         );
 
         const validationError = validateRecordData(
-        data,
-        columnsResult.rows
+            data,
+            columnsResult.rows
         );
 
         if (validationError) {
-        return res.status(400).json({
-          error: validationError
-        });
-     }
+            return res.status(400).json({
+                error: validationError
+            });
+        }
 
         const existingRecord = await pool.query(
             `SELECT id
@@ -207,7 +207,54 @@ async function getRecords(req, res) {
     }
 }
 
+async function getRecordById(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const recordId = req.params.recordId;
+        const organizationId = req.user.organizationId;
+
+        const datasetResult = await pool.query(
+            `SELECT id
+             FROM datasets
+             WHERE id = $1
+               AND organization_id = $2`,
+            [datasetId, organizationId]
+        );
+
+        if (datasetResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT id, dataset_id, data, row_number, created_at
+             FROM dataset_records
+             WHERE id = $1
+               AND dataset_id = $2`,
+            [recordId, datasetId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Record not found"
+            });
+        }
+
+        res.json({
+            record: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Failed to fetch dataset record:", error.message);
+
+        res.status(500).json({
+            error: "Failed to fetch dataset record"
+        });
+    }
+}
+
 module.exports = {
     createRecord,
-    getRecords
+    getRecords,
+    getRecordById
 };

@@ -2,7 +2,8 @@ const express = require("express");
 
 const {
     createRecord,
-    getRecords
+    getRecords,
+    getRecordById
 } = require("../controllers/datasetRecordController");
 
 const {
@@ -27,6 +28,12 @@ router.get(
     "/:id/records",
     authorizeRoles("admin", "analyst", "viewer"),
     getRecords
+);
+
+router.get(
+    "/:id/records/:recordId",
+    authorizeRoles("admin", "analyst", "viewer"),
+    getRecordById
 );
 
 module.exports = router;
