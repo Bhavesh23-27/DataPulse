@@ -2,7 +2,8 @@ const express = require("express");
 
 const {
     createColumn,
-    getColumns
+    getColumns,
+    updateColumn
 } = require("../controllers/datasetColumnController");
 
 const {
@@ -27,6 +28,12 @@ router.get(
     "/:id/columns",
     authorizeRoles("admin", "analyst", "viewer"),
     getColumns
+);
+
+router.put(
+    "/:id/columns/:columnId",
+    authorizeRoles("admin", "analyst"),
+    updateColumn
 );
 
 module.exports = router;

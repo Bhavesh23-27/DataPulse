@@ -134,7 +134,154 @@ async function getColumns(req, res) {
     }
 }
 
+async function updateColumn(req, res) {
+    const client = await pool.connect();
+
+    try {
+        const datasetId = req.params.id;
+        const columnId = req.params.columnId;
+        const organizationId = req.user.organizationId;
+
+        const {
+            name,
+            nullable
+        } = req.body;
+
+        if (!name || nullable === undefined) {
+            return res.status(400).json({
+                error: "Name and nullable are required"
+            });
+        }
+
+        if (typeof nullable !== "boolean") {
+            return res.status(400).json({
+                error: "nullable must be a boolean"
+            });
+        }
+
+        await client.query("BEGIN");
+
+        const datasetResult = await client.query(
+            `SELECT id
+             FROM datasets
+             WHERE id = $1
+               AND organization_id = $2`,
+            [datasetId, organizationId]
+        );
+
+        if (datasetResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        const columnResult = await client.query(
+            `SELECT id, name, data_type, position, nullable
+             FROM dataset_columns
+             WHERE id = $1
+               AND dataset_id = $2`,
+            [columnId, datasetId]
+        );
+
+        if (columnResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+
+            return res.status(404).json({
+                error: "Column not found"
+            });
+        }
+
+        const existingColumnData = columnResult.rows[0];
+        const oldName = existingColumnData.name;
+
+        const duplicateColumn = await client.query(
+            `SELECT id
+             FROM dataset_columns
+             WHERE dataset_id = $1
+               AND name = $2
+               AND id <> $3`,
+            [datasetId, name, columnId]
+        );
+
+        if (duplicateColumn.rows.length > 0) {
+            await client.query("ROLLBACK");
+
+            return res.status(409).json({
+                error: "Column name already exists"
+            });
+        }
+
+        if (!nullable) {
+            const recordsResult = await client.query(
+                `SELECT id
+                 FROM dataset_records
+                 WHERE dataset_id = $1
+                   AND (
+                       data -> $2 IS NULL
+                       OR data -> $2 = 'null'::jsonb
+                   )
+                 LIMIT 1`,
+                [datasetId, oldName]
+            );
+
+            if (recordsResult.rows.length > 0) {
+                await client.query("ROLLBACK");
+
+                return res.status(400).json({
+                    error: "Column cannot be non-nullable because existing records contain null or missing values"
+                });
+            }
+        }
+
+        if (oldName !== name) {
+            await client.query(
+    `UPDATE dataset_records
+     SET data = (data - $1) || jsonb_build_object($2::text, data -> $1)
+     WHERE dataset_id = $3
+       AND data ? $1`,
+    [oldName, name, datasetId]
+);
+        }
+
+        const result = await client.query(
+            `UPDATE dataset_columns
+             SET name = $1,
+                 nullable = $2
+             WHERE id = $3
+               AND dataset_id = $4
+             RETURNING id, dataset_id, name, data_type,
+                       position, nullable, created_at`,
+            [
+                name,
+                nullable,
+                columnId,
+                datasetId
+            ]
+        );
+
+        await client.query("COMMIT");
+
+        res.json({
+            message: "Column updated successfully",
+            column: result.rows[0]
+        });
+    } catch (error) {
+        await client.query("ROLLBACK");
+
+        console.error("Failed to update dataset column:", error.message);
+
+        res.status(500).json({
+            error: "Failed to update dataset column"
+        });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     createColumn,
-    getColumns
+    getColumns,
+    updateColumn
 };
