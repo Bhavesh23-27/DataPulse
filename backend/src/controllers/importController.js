@@ -7,13 +7,14 @@ async function importCsv(req, res) {
     try {
         const datasetId = req.params.id;
         const organizationId = req.user.organizationId;
-        const { csv } = req.body;
 
-        if (!csv) {
+        if (!req.file) {
             return res.status(400).json({
-                error: "CSV content is required"
+                error: "CSV file is required"
             });
         }
+
+        const csv = req.file.buffer.toString("utf-8");
 
         const validationResult = await validateCsvForDataset(
             csv,
