@@ -178,7 +178,116 @@ async function getColumnDistribution(
     };
 }
 
+async function getColumnTrend(
+    datasetId,
+    organizationId,
+    dateColumnName,
+    valueColumnName
+) {
+    const datasetResult = await pool.query(
+        `
+        SELECT id
+        FROM datasets
+        WHERE id = $1
+          AND organization_id = $2
+        `,
+        [datasetId, organizationId]
+    );
+
+    if (datasetResult.rows.length === 0) {
+        throw new Error("Dataset not found");
+    }
+
+    const columnsResult = await pool.query(
+        `
+        SELECT name, data_type
+        FROM dataset_columns
+        WHERE dataset_id = $1
+          AND name IN ($2, $3)
+        `,
+        [datasetId, dateColumnName, valueColumnName]
+    );
+
+    const dateColumn = columnsResult.rows.find(
+        (column) => column.name === dateColumnName
+    );
+
+    const valueColumn = columnsResult.rows.find(
+        (column) => column.name === valueColumnName
+    );
+
+    if (!dateColumn) {
+        throw new Error("Date column not found");
+    }
+
+    if (!valueColumn) {
+        throw new Error("Value column not found");
+    }
+
+    if (
+        dateColumn.data_type !== "date" &&
+        dateColumn.data_type !== "datetime"
+    ) {
+        throw new Error(
+            "Trend date column must be a date or datetime column"
+        );
+    }
+
+    if (valueColumn.data_type !== "number") {
+        throw new Error(
+            "Trend value column must be a number column"
+        );
+    }
+
+    const recordsResult = await pool.query(
+        `
+        SELECT data
+        FROM dataset_records
+        WHERE dataset_id = $1
+        ORDER BY row_number
+        `,
+        [datasetId]
+    );
+
+    const trend = [];
+
+    for (const record of recordsResult.rows) {
+        const dateValue = record.data[dateColumnName];
+        const value = record.data[valueColumnName];
+
+        if (
+            dateValue === null ||
+            dateValue === undefined ||
+            dateValue === "" ||
+            value === null ||
+            value === undefined ||
+            value === "" ||
+            Number.isNaN(Number(value))
+        ) {
+            continue;
+        }
+
+        trend.push({
+            date: String(dateValue),
+            value: Number(value)
+        });
+    }
+
+    trend.sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+    );
+
+    return {
+        dataset_id: datasetId,
+        date_column: dateColumnName,
+        value_column: valueColumnName,
+        total: trend.length,
+        trend
+    };
+}
+
 module.exports = {
     getDatasetSummary,
-    getColumnDistribution
+    getColumnDistribution,
+    getColumnTrend
 };

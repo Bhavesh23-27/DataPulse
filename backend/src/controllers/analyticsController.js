@@ -1,6 +1,7 @@
 const {
     getDatasetSummary,
-    getColumnDistribution
+    getColumnDistribution,
+    getColumnTrend
 } = require("../services/analyticsService");
 
 async function getSummary(req, res) {
@@ -72,7 +73,56 @@ async function getDistribution(req, res) {
     }
 }
 
+async function getTrend(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const dateColumnName = req.params.dateColumn;
+        const valueColumnName = req.params.valueColumn;
+        const organizationId = req.user.organizationId;
+
+        const trend = await getColumnTrend(
+            datasetId,
+            organizationId,
+            dateColumnName,
+            valueColumnName
+        );
+
+        return res.status(200).json(trend);
+    } catch (error) {
+        console.error(
+            "Column trend failed:",
+            error.message
+        );
+
+        if (
+            error.message === "Dataset not found" ||
+            error.message === "Date column not found" ||
+            error.message === "Value column not found"
+        ) {
+            return res.status(404).json({
+                error: error.message
+            });
+        }
+
+        if (
+            error.message ===
+            "Trend date column must be a date or datetime column" ||
+            error.message ===
+            "Trend value column must be a number column"
+        ) {
+            return res.status(400).json({
+                error: error.message
+            });
+        }
+
+        return res.status(500).json({
+            error: "Failed to generate column trend"
+        });
+    }
+}
+
 module.exports = {
     getSummary,
-    getDistribution
+    getDistribution,
+    getTrend
 };
