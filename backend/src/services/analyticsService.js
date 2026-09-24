@@ -140,7 +140,6 @@ async function getColumnDistribution(
     );
 
     const counts = {};
-
     let total = 0;
 
     for (const record of recordsResult.rows) {
@@ -286,8 +285,154 @@ async function getColumnTrend(
     };
 }
 
+async function getDashboardData(datasetId, organizationId) {
+    const datasetResult = await pool.query(
+        `
+        SELECT id, name, description, source_type, status, created_at
+        FROM datasets
+        WHERE id = $1
+          AND organization_id = $2
+        `,
+        [datasetId, organizationId]
+    );
+
+    if (datasetResult.rows.length === 0) {
+        throw new Error("Dataset not found");
+    }
+
+    const columnsResult = await pool.query(
+        `
+        SELECT name, data_type, position, nullable
+        FROM dataset_columns
+        WHERE dataset_id = $1
+        ORDER BY position
+        `,
+        [datasetId]
+    );
+
+    const summary = await getDatasetSummary(
+        datasetId,
+        organizationId
+    );
+
+    const recordsResult = await pool.query(
+        `
+        SELECT data
+        FROM dataset_records
+        WHERE dataset_id = $1
+        ORDER BY row_number
+        `,
+        [datasetId]
+    );
+
+    const distributions = {};
+
+    for (const column of columnsResult.rows) {
+        if (
+            column.data_type !== "text" &&
+            column.data_type !== "boolean"
+        ) {
+            continue;
+        }
+
+        const counts = {};
+        let total = 0;
+
+        for (const record of recordsResult.rows) {
+            const value = record.data[column.name];
+
+            if (
+                value === null ||
+                value === undefined ||
+                value === ""
+            ) {
+                continue;
+            }
+
+            const key = String(value);
+
+            counts[key] = (counts[key] || 0) + 1;
+            total++;
+        }
+
+        distributions[column.name] = {
+            total,
+            values: Object.entries(counts)
+                .map(([value, count]) => ({
+                    value,
+                    count,
+                    percentage: total === 0
+                        ? 0
+                        : (count / total) * 100
+                }))
+                .sort((a, b) => b.count - a.count)
+        };
+    }
+
+    const dateColumns = columnsResult.rows.filter(
+        (column) =>
+            column.data_type === "date" ||
+            column.data_type === "datetime"
+    );
+
+    const numberColumns = columnsResult.rows.filter(
+        (column) => column.data_type === "number"
+    );
+
+    const trends = {};
+
+    for (const dateColumn of dateColumns) {
+        for (const numberColumn of numberColumns) {
+            const trend = [];
+
+            for (const record of recordsResult.rows) {
+                const dateValue = record.data[dateColumn.name];
+                const value = record.data[numberColumn.name];
+
+                if (
+                    dateValue === null ||
+                    dateValue === undefined ||
+                    dateValue === "" ||
+                    value === null ||
+                    value === undefined ||
+                    value === "" ||
+                    Number.isNaN(Number(value))
+                ) {
+                    continue;
+                }
+
+                trend.push({
+                    date: String(dateValue),
+                    value: Number(value)
+                });
+            }
+
+            trend.sort(
+                (a, b) =>
+                    new Date(a.date) - new Date(b.date)
+            );
+
+            trends[`${dateColumn.name}:${numberColumn.name}`] = {
+                date_column: dateColumn.name,
+                value_column: numberColumn.name,
+                total: trend.length,
+                trend
+            };
+        }
+    }
+
+    return {
+        dataset: datasetResult.rows[0],
+        columns: columnsResult.rows,
+        summary,
+        distributions,
+        trends
+    };
+}
+
 module.exports = {
     getDatasetSummary,
     getColumnDistribution,
-    getColumnTrend
+    getColumnTrend,
+    getDashboardData
 };

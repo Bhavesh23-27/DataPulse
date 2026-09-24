@@ -3,7 +3,8 @@ const express = require("express");
 const {
     getSummary,
     getDistribution,
-    getTrend
+    getTrend,
+    getDashboard
 } = require("../controllers/analyticsController");
 
 const { authenticateToken } = require("../middleware/authMiddleware");
@@ -29,6 +30,12 @@ router.get(
     "/:id/trend/:dateColumn/:valueColumn",
     authorizeRoles("admin", "analyst"),
     getTrend
+);
+
+router.get(
+    "/:id/dashboard",
+    authorizeRoles("admin", "analyst"),
+    getDashboard
 );
 
 module.exports = router;

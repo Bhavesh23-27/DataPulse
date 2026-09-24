@@ -1,7 +1,8 @@
 const {
     getDatasetSummary,
     getColumnDistribution,
-    getColumnTrend
+    getColumnTrend,
+    getDashboardData
 } = require("../services/analyticsService");
 
 async function getSummary(req, res) {
@@ -121,8 +122,38 @@ async function getTrend(req, res) {
     }
 }
 
+async function getDashboard(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const organizationId = req.user.organizationId;
+
+        const dashboard = await getDashboardData(
+            datasetId,
+            organizationId
+        );
+
+        return res.status(200).json(dashboard);
+    } catch (error) {
+        console.error(
+            "Dashboard analytics failed:",
+            error.message
+        );
+
+        if (error.message === "Dataset not found") {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        return res.status(500).json({
+            error: "Failed to generate dashboard data"
+        });
+    }
+}
+
 module.exports = {
     getSummary,
     getDistribution,
-    getTrend
+    getTrend,
+    getDashboard
 };
