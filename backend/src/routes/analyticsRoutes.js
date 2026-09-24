@@ -1,6 +1,10 @@
 const express = require("express");
 
-const { getSummary } = require("../controllers/analyticsController");
+const {
+    getSummary,
+    getDistribution
+} = require("../controllers/analyticsController");
+
 const { authenticateToken } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
 
@@ -12,6 +16,12 @@ router.get(
     "/:id/summary",
     authorizeRoles("admin", "analyst"),
     getSummary
+);
+
+router.get(
+    "/:id/distribution/:columnName",
+    authorizeRoles("admin", "analyst"),
+    getDistribution
 );
 
 module.exports = router;

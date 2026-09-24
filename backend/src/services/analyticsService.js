@@ -87,6 +87,98 @@ async function getDatasetSummary(datasetId, organizationId) {
     return summary;
 }
 
+async function getColumnDistribution(
+    datasetId,
+    organizationId,
+    columnName
+) {
+    const datasetResult = await pool.query(
+        `
+        SELECT id
+        FROM datasets
+        WHERE id = $1
+          AND organization_id = $2
+        `,
+        [datasetId, organizationId]
+    );
+
+    if (datasetResult.rows.length === 0) {
+        throw new Error("Dataset not found");
+    }
+
+    const columnResult = await pool.query(
+        `
+        SELECT name, data_type
+        FROM dataset_columns
+        WHERE dataset_id = $1
+          AND name = $2
+        `,
+        [datasetId, columnName]
+    );
+
+    if (columnResult.rows.length === 0) {
+        throw new Error("Column not found");
+    }
+
+    if (
+        columnResult.rows[0].data_type !== "text" &&
+        columnResult.rows[0].data_type !== "boolean"
+    ) {
+        throw new Error(
+            "Distribution is only available for text and boolean columns"
+        );
+    }
+
+    const recordsResult = await pool.query(
+        `
+        SELECT data
+        FROM dataset_records
+        WHERE dataset_id = $1
+        ORDER BY row_number
+        `,
+        [datasetId]
+    );
+
+    const counts = {};
+
+    let total = 0;
+
+    for (const record of recordsResult.rows) {
+        const value = record.data[columnName];
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+            continue;
+        }
+
+        const key = String(value);
+
+        counts[key] = (counts[key] || 0) + 1;
+        total++;
+    }
+
+    const distribution = Object.entries(counts)
+        .map(([value, count]) => ({
+            value,
+            count,
+            percentage: total === 0
+                ? 0
+                : (count / total) * 100
+        }))
+        .sort((a, b) => b.count - a.count);
+
+    return {
+        dataset_id: datasetId,
+        column: columnName,
+        total,
+        distribution
+    };
+}
+
 module.exports = {
-    getDatasetSummary
+    getDatasetSummary,
+    getColumnDistribution
 };
