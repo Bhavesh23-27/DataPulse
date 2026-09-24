@@ -239,8 +239,29 @@ async function insertRecords(
     }
 }
 
+function parseJson(jsonText) {
+    const data = JSON.parse(jsonText);
+
+    if (!Array.isArray(data)) {
+        throw new Error("JSON data must be an array of objects");
+    }
+
+    if (data.length === 0) {
+        throw new Error("JSON data cannot be empty");
+    }
+
+    for (const row of data) {
+        if (typeof row !== "object" || row === null || Array.isArray(row)) {
+            throw new Error("Each JSON item must be an object");
+        }
+    }
+
+    return data;
+}
+
 module.exports = {
     parseCsv,
+    parseJson,
     getDatasetColumns,
     convertValue,
     validateAndTransformRows,

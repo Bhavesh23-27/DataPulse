@@ -6,10 +6,15 @@ const upload = multer({
         fileSize: 5 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype === "text/csv") {
+        const allowedTypes = [
+            "text/csv",
+            "application/json"
+        ];
+
+        if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error("Only CSV files are allowed"));
+            cb(new Error("Only CSV and JSON files are allowed"));
         }
     }
 });

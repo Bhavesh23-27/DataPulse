@@ -1,6 +1,6 @@
 const express = require("express");
 
-const { importCsv } = require("../controllers/importController");
+const { importData } = require("../controllers/importController");
 const { authenticateToken } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
 const upload = require("../middleware/uploadMiddleware");
@@ -13,7 +13,7 @@ router.post(
     "/:id/import",
     authorizeRoles("admin", "analyst"),
     upload.single("file"),
-    importCsv
+    importData
 );
 
 module.exports = router;

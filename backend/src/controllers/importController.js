@@ -1,37 +1,57 @@
 const {
-    validateCsvForDataset,
+    parseCsv,
+    parseJson,
+    validateAndTransformRows,
+    getDatasetColumns,
     insertRecords
 } = require("../services/csvImportService");
 
-async function importCsv(req, res) {
+async function importData(req, res) {
     try {
         const datasetId = req.params.id;
         const organizationId = req.user.organizationId;
 
         if (!req.file) {
             return res.status(400).json({
-                error: "CSV file is required"
+                error: "CSV or JSON file is required"
             });
         }
 
-        const csv = req.file.buffer.toString("utf-8");
+        const fileName = req.file.originalname.toLowerCase();
+        const fileContent = req.file.buffer.toString("utf-8");
 
-        const validationResult = await validateCsvForDataset(
-            csv,
+        let rows;
+
+        if (fileName.endsWith(".csv")) {
+            rows = parseCsv(fileContent);
+        } else if (fileName.endsWith(".json")) {
+            rows = parseJson(fileContent);
+        } else {
+            return res.status(400).json({
+                error: "Only CSV and JSON files are supported"
+            });
+        }
+
+        const columns = await getDatasetColumns(
             datasetId,
             organizationId
         );
 
+        const validationResult = validateAndTransformRows(
+            rows,
+            columns
+        );
+
         if (validationResult.errors.length > 0) {
             return res.status(400).json({
-                error: "CSV validation failed",
+                error: "File validation failed",
                 errors: validationResult.errors
             });
         }
 
         if (validationResult.transformedRows.length === 0) {
             return res.status(400).json({
-                error: "CSV does not contain any data rows"
+                error: "File does not contain any data rows"
             });
         }
 
@@ -40,20 +60,20 @@ async function importCsv(req, res) {
             validationResult.transformedRows
         );
 
-        res.status(201).json({
-            message: "CSV imported successfully",
+        return res.status(201).json({
+            message: "File imported successfully",
             imported_count: insertedRecords.length,
             records: insertedRecords
         });
     } catch (error) {
-        console.error("CSV import failed:", error.message);
+        console.error("Data import failed:", error.message);
 
-        res.status(500).json({
-            error: "CSV import failed"
+        return res.status(400).json({
+            error: error.message
         });
     }
 }
 
 module.exports = {
-    importCsv
+    importData
 };
