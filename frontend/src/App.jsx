@@ -29,6 +29,7 @@ function App() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginError, setLoginError] = useState("");
 
@@ -52,7 +53,9 @@ function App() {
                     logout();
                     setUser(null);
                     setDashboardData(null);
-                    setError("Your session has expired. Please log in again.");
+                    setError(
+                        "Your session has expired. Please log in again."
+                    );
                     return;
                 }
 
@@ -81,14 +84,19 @@ function App() {
         setLoginError("");
 
         if (!email || !password) {
-            setLoginError("Email and password are required.");
+            setLoginError(
+                "Email and password are required."
+            );
             return;
         }
 
         try {
             setLoginLoading(true);
 
-            const data = await login(email, password);
+            const data = await login(
+                email,
+                password
+            );
 
             setUser(data.user);
 
@@ -133,7 +141,8 @@ function App() {
                         background: "#ffffff",
                         borderRadius: "16px",
                         padding: "36px",
-                        boxShadow: "0 10px 35px rgba(15, 23, 42, 0.08)"
+                        boxShadow:
+                            "0 10px 35px rgba(15, 23, 42, 0.08)"
                     }}
                 >
                     <div
@@ -154,8 +163,7 @@ function App() {
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontWeight: "700",
-                                fontSize: "18px"
+                                fontWeight: "800"
                             }}
                         >
                             DP
@@ -165,8 +173,8 @@ function App() {
                             <h1
                                 style={{
                                     margin: 0,
-                                    fontSize: "22px",
-                                    color: "#111827"
+                                    fontSize: "24px",
+                                    color: "#172033"
                                 }}
                             >
                                 DataPulse
@@ -175,8 +183,8 @@ function App() {
                             <p
                                 style={{
                                     margin: "4px 0 0",
-                                    color: "#64748b",
-                                    fontSize: "14px"
+                                    color: "#7b8495",
+                                    fontSize: "13px"
                                 }}
                             >
                                 Analytics Platform
@@ -184,44 +192,31 @@ function App() {
                         </div>
                     </div>
 
-                    <div style={{ marginBottom: "24px" }}>
-                        <h2
-                            style={{
-                                margin: "0 0 8px",
-                                color: "#111827",
-                                fontSize: "28px"
-                            }}
-                        >
-                            Welcome back
-                        </h2>
+                    <h2
+                        style={{
+                            margin: "0 0 8px",
+                            color: "#172033"
+                        }}
+                    >
+                        Welcome back
+                    </h2>
 
-                        <p
-                            style={{
-                                margin: 0,
-                                color: "#64748b"
-                            }}
-                        >
-                            Sign in to access your DataPulse dashboard.
-                        </p>
-                    </div>
-
-                    {loginError && (
-                        <div
-                            style={{
-                                marginBottom: "18px",
-                                padding: "12px 14px",
-                                borderRadius: "8px",
-                                background: "#fef2f2",
-                                color: "#b91c1c",
-                                fontSize: "14px"
-                            }}
-                        >
-                            {loginError}
-                        </div>
-                    )}
+                    <p
+                        style={{
+                            margin: "0 0 24px",
+                            color: "#7b8495",
+                            fontSize: "14px"
+                        }}
+                    >
+                        Sign in to continue to DataPulse.
+                    </p>
 
                     <form onSubmit={handleLogin}>
-                        <div style={{ marginBottom: "18px" }}>
+                        <div
+                            style={{
+                                marginBottom: "18px"
+                            }}
+                        >
                             <label
                                 style={{
                                     display: "block",
@@ -238,7 +233,9 @@ function App() {
                                 type="email"
                                 value={email}
                                 onChange={(event) =>
-                                    setEmail(event.target.value)
+                                    setEmail(
+                                        event.target.value
+                                    )
                                 }
                                 placeholder="Enter your email"
                                 autoComplete="email"
@@ -254,7 +251,11 @@ function App() {
                             />
                         </div>
 
-                        <div style={{ marginBottom: "22px" }}>
+                        <div
+                            style={{
+                                marginBottom: "22px"
+                            }}
+                        >
                             <label
                                 style={{
                                     display: "block",
@@ -271,7 +272,9 @@ function App() {
                                 type="password"
                                 value={password}
                                 onChange={(event) =>
-                                    setPassword(event.target.value)
+                                    setPassword(
+                                        event.target.value
+                                    )
                                 }
                                 placeholder="Enter your password"
                                 autoComplete="current-password"
@@ -286,6 +289,18 @@ function App() {
                                 }}
                             />
                         </div>
+
+                        {loginError && (
+                            <p
+                                style={{
+                                    margin: "0 0 16px",
+                                    color: "#dc2626",
+                                    fontSize: "13px"
+                                }}
+                            >
+                                {loginError}
+                            </p>
+                        )}
 
                         <button
                             type="submit"
@@ -302,7 +317,9 @@ function App() {
                                 cursor: loginLoading
                                     ? "not-allowed"
                                     : "pointer",
-                                opacity: loginLoading ? 0.7 : 1
+                                opacity: loginLoading
+                                    ? 0.7
+                                    : 1
                             }}
                         >
                             <span
@@ -411,8 +428,9 @@ function App() {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <div className="user-avatar">
-                        {user.name?.charAt(0).toUpperCase() || "B"}
+                    <div className="profile-avatar">
+                        {user.name?.charAt(0).toUpperCase() ||
+                            "B"}
                     </div>
 
                     <div className="user-info">
@@ -438,7 +456,10 @@ function App() {
                             onClick={handleLogout}
                         >
                             <span className="profile-avatar">
-                                {user.name?.charAt(0).toUpperCase() || "B"}
+                                {user.name
+                                    ?.charAt(0)
+                                    .toUpperCase() ||
+                                    "B"}
                             </span>
 
                             <span>{user.name}</span>
@@ -457,8 +478,8 @@ function App() {
                                 {loading
                                     ? "Loading dashboard..."
                                     : dashboardData
-                                        ? dashboardData.dataset.name
-                                        : "Dashboard"}
+                                      ? dashboardData.dataset.name
+                                      : "Dashboard"}
                             </h3>
 
                             <p>
@@ -495,7 +516,9 @@ function App() {
 
                         <div className="stat-card">
                             <div className="stat-icon">
-                                <FileSpreadsheet size={21} />
+                                <FileSpreadsheet
+                                    size={21}
+                                />
                             </div>
 
                             <div>
@@ -505,7 +528,10 @@ function App() {
 
                                 <strong className="stat-value">
                                     {dashboardData
-                                        ? dashboardData.summary.row_count
+                                        ? dashboardData
+                                              .summary
+                                              ?.row_count ??
+                                          "..."
                                         : "..."}
                                 </strong>
                             </div>
@@ -558,48 +584,64 @@ function App() {
                                         {loading
                                             ? "Loading..."
                                             : dashboardData
-                                                ? dashboardData.dataset.name
-                                                : "Dataset"}
+                                              ? dashboardData
+                                                    .dataset
+                                                    .name
+                                              : "Dataset"}
                                     </h4>
                                 </div>
 
                                 <span className="status-badge">
                                     {dashboardData
-                                        ? dashboardData.dataset.status
-                                            .charAt(0)
-                                            .toUpperCase() +
-                                          dashboardData.dataset.status.slice(1)
+                                        ? dashboardData
+                                              .dataset
+                                              .status
                                         : "..."}
                                 </span>
                             </div>
 
                             <div className="dataset-details">
                                 <div>
-                                    <span>Records</span>
+                                    <span>
+                                        Records
+                                    </span>
 
                                     <strong>
                                         {dashboardData
-                                            ? dashboardData.summary.row_count
+                                            ? dashboardData
+                                                  .summary
+                                                  ?.row_count ??
+                                              "..."
                                             : "..."}
                                     </strong>
                                 </div>
 
                                 <div>
-                                    <span>Columns</span>
+                                    <span>
+                                        Columns
+                                    </span>
 
                                     <strong>
                                         {dashboardData
-                                            ? dashboardData.columns.length
+                                            ? dashboardData
+                                                  .columns
+                                                  ?.length ??
+                                              "..."
                                             : "..."}
                                     </strong>
                                 </div>
 
                                 <div>
-                                    <span>Source</span>
+                                    <span>
+                                        Source
+                                    </span>
 
                                     <strong>
                                         {dashboardData
-                                            ? dashboardData.dataset.source_type.toUpperCase()
+                                            ? dashboardData
+                                                  .dataset
+                                                  .source_type
+                                                  ?.toUpperCase()
                                             : "..."}
                                     </strong>
                                 </div>
@@ -633,7 +675,9 @@ function App() {
 
                                     <span>
                                         {dashboardData
-                                            ? dashboardData.dataset.name
+                                            ? dashboardData
+                                                  .dataset
+                                                  .name
                                             : "Loading dataset..."}
                                     </span>
                                 </div>
