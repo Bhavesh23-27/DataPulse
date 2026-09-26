@@ -18,6 +18,14 @@ async function createColumn(req, res) {
             });
         }
 
+        const trimmedName = name.trim();
+
+        if (!trimmedName) {
+            return res.status(400).json({
+                error: "Column name cannot be empty"
+            });
+        }
+
         const validDataTypes = [
             "text",
             "number",
@@ -35,6 +43,15 @@ async function createColumn(req, res) {
         if (!Number.isInteger(position) || position <= 0) {
             return res.status(400).json({
                 error: "Position must be a positive integer"
+            });
+        }
+
+        if (
+            nullable !== undefined &&
+            typeof nullable !== "boolean"
+        ) {
+            return res.status(400).json({
+                error: "nullable must be a boolean"
             });
         }
 
@@ -57,7 +74,7 @@ async function createColumn(req, res) {
              FROM dataset_columns
              WHERE dataset_id = $1
                AND name = $2`,
-            [datasetId, name]
+            [datasetId, trimmedName]
         );
 
         if (existingColumn.rows.length > 0) {
@@ -74,7 +91,7 @@ async function createColumn(req, res) {
                       position, nullable, created_at`,
             [
                 datasetId,
-                name,
+                trimmedName,
                 data_type,
                 position,
                 nullable === undefined ? true : nullable
@@ -86,7 +103,10 @@ async function createColumn(req, res) {
             column: result.rows[0]
         });
     } catch (error) {
-        console.error("Failed to create dataset column:", error.message);
+        console.error(
+            "Failed to create dataset column:",
+            error.message
+        );
 
         res.status(500).json({
             error: "Failed to create dataset column"
@@ -126,7 +146,10 @@ async function getColumns(req, res) {
             columns: result.rows
         });
     } catch (error) {
-        console.error("Failed to fetch dataset columns:", error.message);
+        console.error(
+            "Failed to fetch dataset columns:",
+            error.message
+        );
 
         res.status(500).json({
             error: "Failed to fetch dataset columns"
@@ -150,6 +173,14 @@ async function updateColumn(req, res) {
         if (!name || nullable === undefined) {
             return res.status(400).json({
                 error: "Name and nullable are required"
+            });
+        }
+
+        const trimmedName = name.trim();
+
+        if (!trimmedName) {
+            return res.status(400).json({
+                error: "Column name cannot be empty"
             });
         }
 
@@ -202,7 +233,11 @@ async function updateColumn(req, res) {
              WHERE dataset_id = $1
                AND name = $2
                AND id <> $3`,
-            [datasetId, name, columnId]
+            [
+                datasetId,
+                trimmedName,
+                columnId
+            ]
         );
 
         if (duplicateColumn.rows.length > 0) {
@@ -223,26 +258,39 @@ async function updateColumn(req, res) {
                        OR data -> $2 = 'null'::jsonb
                    )
                  LIMIT 1`,
-                [datasetId, oldName]
+                [
+                    datasetId,
+                    oldName
+                ]
             );
 
             if (recordsResult.rows.length > 0) {
                 await client.query("ROLLBACK");
 
                 return res.status(400).json({
-                    error: "Column cannot be non-nullable because existing records contain null or missing values"
+                    error:
+                        "Column cannot be non-nullable because existing records contain null or missing values"
                 });
             }
         }
 
-        if (oldName !== name) {
+        if (oldName !== trimmedName) {
             await client.query(
-    `UPDATE dataset_records
-     SET data = (data - $1) || jsonb_build_object($2::text, data -> $1)
-     WHERE dataset_id = $3
-       AND data ? $1`,
-    [oldName, name, datasetId]
-);
+                `UPDATE dataset_records
+                 SET data =
+                     (data - $1) ||
+                     jsonb_build_object(
+                         $2::text,
+                         data -> $1
+                     )
+                 WHERE dataset_id = $3
+                   AND data ? $1`,
+                [
+                    oldName,
+                    trimmedName,
+                    datasetId
+                ]
+            );
         }
 
         const result = await client.query(
@@ -254,7 +302,7 @@ async function updateColumn(req, res) {
              RETURNING id, dataset_id, name, data_type,
                        position, nullable, created_at`,
             [
-                name,
+                trimmedName,
                 nullable,
                 columnId,
                 datasetId
@@ -268,9 +316,19 @@ async function updateColumn(req, res) {
             column: result.rows[0]
         });
     } catch (error) {
-        await client.query("ROLLBACK");
+        try {
+            await client.query("ROLLBACK");
+        } catch (rollbackError) {
+            console.error(
+                "Rollback failed:",
+                rollbackError.message
+            );
+        }
 
-        console.error("Failed to update dataset column:", error.message);
+        console.error(
+            "Failed to update dataset column:",
+            error.message
+        );
 
         res.status(500).json({
             error: "Failed to update dataset column"
