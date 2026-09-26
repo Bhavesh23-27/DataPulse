@@ -96,6 +96,50 @@ async function getDatasetById(req, res) {
     }
 }
 
+async function getDatasetRecords(req, res) {
+    try {
+        const datasetId = req.params.id;
+        const organizationId = req.user.organizationId;
+
+        const datasetResult = await pool.query(
+            `SELECT id, name, description, source_type, status, created_at
+             FROM datasets
+             WHERE id = $1
+               AND organization_id = $2`,
+            [datasetId, organizationId]
+        );
+
+        if (datasetResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Dataset not found"
+            });
+        }
+
+        const recordsResult = await pool.query(
+            `SELECT id, row_number, data
+             FROM dataset_records
+             WHERE dataset_id = $1
+             ORDER BY row_number`,
+            [datasetId]
+        );
+
+        res.status(200).json({
+            dataset: datasetResult.rows[0],
+            records: recordsResult.rows,
+            total_records: recordsResult.rows.length
+        });
+    } catch (error) {
+        console.error(
+            "Failed to fetch dataset records:",
+            error.message
+        );
+
+        res.status(500).json({
+            error: "Failed to fetch dataset records"
+        });
+    }
+}
+
 async function updateDataset(req, res) {
     try {
         const datasetId = req.params.id;
@@ -184,6 +228,7 @@ module.exports = {
     createDataset,
     getDatasets,
     getDatasetById,
+    getDatasetRecords,
     updateDataset,
     deleteDataset
 };
