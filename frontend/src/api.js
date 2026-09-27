@@ -52,7 +52,10 @@ export function getStoredUser() {
     try {
         return JSON.parse(storedUser);
     } catch (error) {
-        console.error("Failed to read stored user:", error);
+        console.error(
+            "Failed to read stored user:",
+            error
+        );
 
         localStorage.removeItem("user");
 
@@ -108,7 +111,10 @@ export async function createDataset(dataset) {
     return response.data;
 }
 
-export async function updateDataset(datasetId, dataset) {
+export async function updateDataset(
+    datasetId,
+    dataset
+) {
     const response = await api.put(
         `/datasets/${datasetId}`,
         dataset
@@ -120,6 +126,43 @@ export async function updateDataset(datasetId, dataset) {
 export async function deleteDataset(datasetId) {
     const response = await api.delete(
         `/datasets/${datasetId}`
+    );
+
+    return response.data;
+}
+
+// =========================
+// DATASET RECORDS
+// =========================
+
+export async function getDatasetRecords(datasetId) {
+    const response = await api.get(
+        `/datasets/${datasetId}/records`
+    );
+
+    return response.data;
+}
+
+// =========================
+// DATA IMPORT
+// =========================
+
+export async function importDatasetFile(
+    datasetId,
+    file
+) {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const response = await api.post(
+        `/datasets/${datasetId}/import`,
+        formData,
+        {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        }
     );
 
     return response.data;
